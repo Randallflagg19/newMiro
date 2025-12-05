@@ -9,9 +9,11 @@ export function App() {
     location.pathname === ROUTES.LOGIN || location.pathname === ROUTES.REGISTER;
 
   return (
-    <div>
+    <div className="bg-gray-100">
       {!isAuthPage && <AppHeader />}
       <Outlet />
     </div>
   );
 }
+
+// 1 31
