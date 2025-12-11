@@ -21,8 +21,8 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: {
         tsconfigRootDir: import.meta.dirname,
-      },
     },
+  },
   },
   eslintBoundariesConfig,
 ]);
