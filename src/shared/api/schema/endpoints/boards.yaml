@@ -41,11 +41,11 @@ schemas:
   BoardsList:
     type: object
     required:
-      - data
+      - list
       - total
       - totalPages
     properties:
-      data:
+      list:
         type: array
         items:
           $ref: "#/schemas/Board"

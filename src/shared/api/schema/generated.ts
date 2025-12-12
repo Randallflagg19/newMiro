@@ -378,7 +378,7 @@ export interface components {
             isFavorite: boolean;
         };
         BoardsList: {
-            data: components["schemas"]["Board"][];
+            list: components["schemas"]["Board"][];
             total: number;
             totalPages: number;
         };
