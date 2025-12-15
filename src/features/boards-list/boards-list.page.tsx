@@ -1,13 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { rqClient } from "@/shared/api/instance";
-import { CONFIG } from "@/shared/model/config";
-import { ROUTES } from "@/shared/model/routes";
 import { Button } from "@/shared/ui/kit/button";
 import { Card, CardFooter, CardHeader } from "@/shared/ui/kit/card";
-import { useQueryClient } from "@tanstack/react-query";
-import { Link, href } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Input } from "@/shared/ui/kit/input";
 import { Label } from "@/shared/ui/kit/label";
+
 import {
   Select,
   SelectContent,
@@ -16,162 +12,89 @@ import {
   SelectValue,
 } from "@/shared/ui/kit/select";
 import { Switch } from "@/shared/ui/kit/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/kit/tabs";
-import type { ApiSchemas } from "@/shared/api/schema";
+import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/kit/tabs";
 import { useBoardsList } from "./use-boards-list";
+import { useBoardsFilters } from "./use-boards-filters";
+import { useDebouncedValue } from "@/shared/lib/react";
+import { useCreateBoard } from "./use-create-board";
+import { useDeleteBoard } from "./use-delete-board";
+import { useUpdateFavorite } from "./use-update-favorite";
+import { PlusIcon, StarIcon } from "lucide-react";
+import {
+  BoardsListLayout,
+  BoardsListLayoutFilters,
+  BoardsListLayoutHeader,
+} from "./boards-list-layout";
+import { useEffect, useRef, useState } from "react";
+import type { ViewMode } from "./view-mode-toggle";
+import { ViewModeToggle } from "./view-mode-toggle";
 
 type BoardsSortOption = "createdAt" | "updatedAt" | "lastOpenedAt" | "name";
 
 function BoardsListPage() {
-  useBoardsList({
-    limit: 20,
+  const boardsFilters = useBoardsFilters();
+  const createBoard = useCreateBoard();
+  const deleteBoard = useDeleteBoard();
+  const updateFavorite = useUpdateFavorite();
+
+  const boardsQuery = useBoardsList({
+    sort: boardsFilters.sort,
+    search: useDebouncedValue(boardsFilters.search, 300),
   });
 
-  const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [sort, setSort] = useState<BoardsSortOption>("lastOpenedAt");
-  const [showFavorites, setShowFavorites] = useState<boolean | null>(null);
-  const [boards, setBoards] = useState<ApiSchemas["Board"][]>([]);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const observer = useRef<IntersectionObserver | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const cursorRef = useRef<HTMLDivElement | null>(null);
 
-  // Дебаунс для поиска
+  const { fetchNextPage, hasNextPage, isFetchingNextPage } = boardsQuery;
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(1); // Сбрасываем страницу при изменении поиска
-      setBoards([]); // Очищаем список досок при новом поиске
-    }, 300);
+    const el = cursorRef.current;
+    if (!el || !hasNextPage) return;
 
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  // Сброс страницы и списка досок при изменении фильтров или сортировки
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPage(1);
-      setBoards([]);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [sort, showFavorites]);
-
-  // const boardsQuery = rqClient.useQuery("get", "/boards", {
-  //   params: {
-  //     query: {
-  //       page,
-  //       limit: 20,
-  //       sort,
-  //       search: debouncedSearch || undefined,
-  //       isFavorite: showFavorites,
-  //     },
-  //   },
-  //   enabled: true,
-  // });
-
-  // Обновляем список досок при получении новых данных
-  // useEffect(() => {
-  //   if (boardsQuery.data?.list) {
-  //     if (page === 1) {
-  //       setBoards(boardsQuery.data.list);
-  //     } else {
-  //       setBoards((prev) => [...prev, ...boardsQuery.data.list]);
-  //     }
-  //     setHasMore(page < (boardsQuery.data.totalPages || 1));
-  //     setIsLoadingMore(false);
-  //   }
-  // }, [boardsQuery.data, page]);
-
-  // // Функция для загрузки следующей страницы
-  // const loadMore = useCallback(() => {
-  //   if (!isLoadingMore && hasMore && !boardsQuery.isPending) {
-  //     setIsLoadingMore(true);
-  //     setPage((prevPage) => prevPage + 1);
-  //   }
-  // }, [isLoadingMore, hasMore, boardsQuery.isPending]);
-
-  // Настройка IntersectionObserver для бесконечной прокрутки
-  useEffect(() => {
-    if (observer.current) {
-      observer.current.disconnect();
-    }
-
-    observer.current = new IntersectionObserver(
+    const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          // loadMore();
+        if (entries[0].isIntersecting && !isFetchingNextPage) {
+          fetchNextPage();
         }
       },
       { threshold: 0.5 }
     );
 
-    if (loadMoreRef.current) {
-      observer.current.observe(loadMoreRef.current);
-    }
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-    return () => {
-      if (observer.current) {
-        observer.current.disconnect();
-      }
-    };
-  }, [hasMore]);
-
-  const createBoardMutation = rqClient.useMutation("post", "/boards", {
-    onSettled: async () => {
-      await queryClient.invalidateQueries(
-        rqClient.queryOptions("get", "/boards")
-      );
-      setPage(1);
-    },
-  });
-
-  const deleteBoardMutation = rqClient.useMutation(
-    "delete",
-    "/boards/{boardId}",
-    {
-      onSettled: async () => {
-        await queryClient.invalidateQueries(
-          rqClient.queryOptions("get", "/boards")
-        );
-      },
-    }
-  );
-
-  const toggleFavoriteMutation = rqClient.useMutation(
-    "put",
-    "/boards/{boardId}/favorite",
-    {
-      onSettled: async () => {
-        await queryClient.invalidateQueries(
-          rqClient.queryOptions("get", "/boards")
-        );
-      },
-    }
-  );
-
-  const handleToggleFavorite = (board: ApiSchemas["Board"]) => {
-    toggleFavoriteMutation.mutate({
-      params: { path: { boardId: board.id } },
-      body: { isFavorite: !board.isFavorite },
-    });
-  };
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">Доски {CONFIG.API_BASE_URL}</h1>
-
-      <div className="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+    <BoardsListLayout
+      header={
+        <BoardsListLayoutHeader
+          title="Доски"
+          description="Здесь вы можете просматривать и управлять вашими досками"
+          actions={
+            <ViewModeToggle
+              value={viewMode}
+              onChange={(value) => setViewMode(value)}
+            />
+            // <Button
+            //   disabled={createBoard.isPending}
+            //   onClick={createBoard.createBoard}
+            // >
+            //   <PlusIcon /> Создать доску
+            // </Button>
+          }
+        />
+      }
+      filters={<BoardsListLayoutFilters></BoardsListLayoutFilters>}
+    >
+      <div className="mb-8 grid grid-cols-1 md:grid-cols-4  gap-4">
         <div className="md:col-span-3">
           <Label htmlFor="search">Поиск</Label>
           <Input
             id="search"
             placeholder="Введите название доски..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={boardsFilters.search}
+            onChange={(e) => boardsFilters.setSearch(e.target.value)}
             className="w-full"
           />
         </div>
@@ -179,8 +102,10 @@ function BoardsListPage() {
         <div className="flex flex-col">
           <Label htmlFor="sort">Сортировка</Label>
           <Select
-            value={sort}
-            onValueChange={(value) => setSort(value as BoardsSortOption)}
+            value={boardsFilters.sort}
+            onValueChange={(value) =>
+              boardsFilters.setSort(value as BoardsSortOption)
+            }
           >
             <SelectTrigger id="sort" className="w-full">
               <SelectValue placeholder="Сортировка" />
@@ -195,55 +120,24 @@ function BoardsListPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="all" className="mb-6">
-        <TabsList>
-          <TabsTrigger value="all" onClick={() => setShowFavorites(null)}>
-            Все доски
-          </TabsTrigger>
-          <TabsTrigger value="favorites" onClick={() => setShowFavorites(true)}>
-            Избранные
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-
       <div className="mb-8">
-        <form
-          className="flex gap-4 items-end"
-          onSubmit={(e) => {
-            e.preventDefault();
-            createBoardMutation.mutate({});
-            e.currentTarget.reset();
-          }}
-        >
-          <div className="flex-grow">
-            <Label htmlFor="board-name">Название новой доски</Label>
-            <Input
-              id="board-name"
-              name="name"
-              placeholder="Введите название..."
-            />
-          </div>
-          <Button type="submit" disabled={createBoardMutation.isPending}>
-            Создать доску
-          </Button>
-        </form>
+        <Button>Создать доску</Button>
       </div>
-
-      {false ? (
+      {boardsQuery.isPending ? (
         <div className="text-center py-10">Загрузка...</div>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {boards.map((board) => (
+            {boardsQuery.boards.map((board) => (
               <Card key={board.id} className="relative">
                 <div className="absolute top-2 right-2 flex items-center gap-2">
-                  <Switch
-                    checked={board.isFavorite}
-                    onCheckedChange={() => handleToggleFavorite(board)}
-                  />
                   <span className="text-sm text-gray-500">
-                    {board.isFavorite ? "В избранном" : ""}
+                    <StarIcon />
                   </span>
+                  <Switch
+                    checked={updateFavorite.isOptimisticFavorite(board)}
+                    onCheckedChange={() => updateFavorite.toggle(board)}
+                  />
                 </div>
                 <CardHeader>
                   <div className="flex flex-col gap-2">
@@ -252,7 +146,8 @@ function BoardsListPage() {
                       variant="link"
                       className="text-left justify-start h-auto p-0"
                     >
-                      <Link to={href(ROUTES.BOARD, { boardId: board.id })}>
+                      <Link to={`/boards/${board.id}`}>
+                        <span>{board.name}</span>
                         <span className="text-xl font-medium">
                           {board.name}
                         </span>
@@ -270,12 +165,8 @@ function BoardsListPage() {
                 <CardFooter>
                   <Button
                     variant="destructive"
-                    disabled={deleteBoardMutation.isPending}
-                    onClick={() =>
-                      deleteBoardMutation.mutate({
-                        params: { path: { boardId: board.id } },
-                      })
-                    }
+                    disabled={deleteBoard.getIsPending(board.id)}
+                    onClick={() => deleteBoard.deleteBoard(board.id)}
                   >
                     Удалить
                   </Button>
@@ -284,19 +175,26 @@ function BoardsListPage() {
             ))}
           </div>
 
-          {boards.length === 0 && (
+          {boardsQuery.boards.length === 0 && !boardsQuery.isPending && (
             <div className="text-center py-10">Доски не найдены</div>
           )}
 
-          {hasMore && (
-            <div ref={loadMoreRef} className="text-center py-8">
-              {isLoadingMore && "Загрузка дополнительных досок..."}
+          {/* {boardsQuery.hasNextPage && (
+            <div ref={boardsQuery.cursorRef} className="text-center py-8">
+              {boardsQuery.isFetchingNextPage &&
+                "Загрузка дополнительных досок..."}
+            </div>
+          )} */}
+
+          {boardsQuery.hasNextPage && (
+            <div ref={cursorRef} className="text-center py-8">
+              {boardsQuery.isFetchingNextPage &&
+                "Загрузка дополнительных досок..."}
             </div>
           )}
         </>
       )}
-    </div>
+    </BoardsListLayout>
   );
 }
-
 export const Component = BoardsListPage;
