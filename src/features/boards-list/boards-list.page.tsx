@@ -1,22 +1,10 @@
 import { Button } from "@/shared/ui/kit/button";
 import { Card, CardFooter, CardHeader } from "@/shared/ui/kit/card";
 import { Link } from "react-router-dom";
-import { Input } from "@/shared/ui/kit/input";
-import { Label } from "@/shared/ui/kit/label";
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui/kit/select";
 import { Switch } from "@/shared/ui/kit/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/kit/tabs";
 import { useBoardsList } from "./use-boards-list";
 import { useBoardsFilters } from "./use-boards-filters";
 import { useDebouncedValue } from "@/shared/lib/react";
-import { useCreateBoard } from "./use-create-board";
 import { useDeleteBoard } from "./use-delete-board";
 import { useUpdateFavorite } from "./use-update-favorite";
 import { PlusIcon, StarIcon } from "lucide-react";
@@ -28,21 +16,21 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type { ViewMode } from "./view-mode-toggle";
 import { ViewModeToggle } from "./view-mode-toggle";
-
-type BoardsSortOption = "createdAt" | "updatedAt" | "lastOpenedAt" | "name";
+import { BoardsSortSelect } from "./boards-sort-select";
+import { BoardsSearchInput } from "./boards-search-input";
+import { useCreateBoard } from "./use-create-board";
 
 function BoardsListPage() {
   const boardsFilters = useBoardsFilters();
-  const createBoard = useCreateBoard();
   const deleteBoard = useDeleteBoard();
   const updateFavorite = useUpdateFavorite();
+  const createBoard = useCreateBoard();
+  const cursorRef = useRef<HTMLDivElement | null>(null);
 
   const boardsQuery = useBoardsList({
     sort: boardsFilters.sort,
     search: useDebouncedValue(boardsFilters.search, 300),
   });
-
-  const cursorRef = useRef<HTMLDivElement | null>(null);
 
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = boardsQuery;
 
@@ -72,57 +60,38 @@ function BoardsListPage() {
           title="Доски"
           description="Здесь вы можете просматривать и управлять вашими досками"
           actions={
+            <Button
+              disabled={createBoard.isPending}
+              onClick={createBoard.createBoard}
+            >
+              <PlusIcon /> Создать доску
+            </Button>
+          }
+        />
+      }
+      filters={
+        <BoardsListLayoutFilters
+          sort={
+            <BoardsSortSelect
+              value={boardsFilters.sort}
+              onValueChange={boardsFilters.setSort}
+            />
+          }
+          filters={
+            <BoardsSearchInput
+              value={boardsFilters.search}
+              onChange={boardsFilters.setSearch}
+            />
+          }
+          actions={
             <ViewModeToggle
               value={viewMode}
               onChange={(value) => setViewMode(value)}
             />
-            // <Button
-            //   disabled={createBoard.isPending}
-            //   onClick={createBoard.createBoard}
-            // >
-            //   <PlusIcon /> Создать доску
-            // </Button>
           }
         />
       }
-      filters={<BoardsListLayoutFilters></BoardsListLayoutFilters>}
     >
-      <div className="mb-8 grid grid-cols-1 md:grid-cols-4  gap-4">
-        <div className="md:col-span-3">
-          <Label htmlFor="search">Поиск</Label>
-          <Input
-            id="search"
-            placeholder="Введите название доски..."
-            value={boardsFilters.search}
-            onChange={(e) => boardsFilters.setSearch(e.target.value)}
-            className="w-full"
-          />
-        </div>
-
-        <div className="flex flex-col">
-          <Label htmlFor="sort">Сортировка</Label>
-          <Select
-            value={boardsFilters.sort}
-            onValueChange={(value) =>
-              boardsFilters.setSort(value as BoardsSortOption)
-            }
-          >
-            <SelectTrigger id="sort" className="w-full">
-              <SelectValue placeholder="Сортировка" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="lastOpenedAt">По дате открытия</SelectItem>
-              <SelectItem value="createdAt">По дате создания</SelectItem>
-              <SelectItem value="updatedAt">По дате обновления</SelectItem>
-              <SelectItem value="name">По имени</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="mb-8">
-        <Button>Создать доску</Button>
-      </div>
       {boardsQuery.isPending ? (
         <div className="text-center py-10">Загрузка...</div>
       ) : (

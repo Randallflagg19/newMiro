@@ -1,17 +1,17 @@
 export function BoardsListLayout({
   header,
   filters,
-  list,
+  children,
 }: {
   header: React.ReactNode;
   filters: React.ReactNode;
-  list: React.ReactNode;
+  children: React.ReactNode;
 }) {
   return (
     <div className="container mx-auto flex flex-col gap-6">
       {header}
       {filters}
-      {list}
+      {children}
     </div>
   );
 }
@@ -47,9 +47,19 @@ export function BoardsListLayoutFilters({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center">
-      <div>{sort}</div>
-      <div>{filters}</div>
+    <div className="flex items-center gap-4">
+      {filters && (
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-gray-500">Filter by</div>
+          {filters}
+        </div>
+      )}
+      {sort && (
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-gray-500">Sort by</div>
+          {sort}
+        </div>
+      )}
       {actions && <div className="ml-auto">{actions}</div>}
     </div>
   );
