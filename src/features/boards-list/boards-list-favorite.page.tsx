@@ -1,32 +1,25 @@
 import { useBoardsList } from "./model/use-boards-list";
-import { useBoardsFilters } from "./model/use-boards-filters";
-import { useDebouncedValue } from "@/shared/lib/react";
 import { useDeleteBoard } from "./model/use-delete-board";
 import { useUpdateFavorite } from "./model/use-update-favorite";
 import { useEffect, useRef, useState } from "react";
 import {
   BoardsListLayout,
   BoardsListLayoutHeader,
-  BoardsListLayoutFilters,
   BoardsListLayoutContent,
   BoardsListListLayout,
   BoardsListCardsLayout,
 } from "./ui/boards-list-layout";
-import { BoardsSortSelect } from "./ui/boards-sort-select";
-import { BoardsSearchInput } from "./ui/boards-search-input";
 import { ViewModeToggle } from "./ui/view-mode-toggle";
 import type { ViewMode } from "./ui/view-mode-toggle";
 import { BoardListCard } from "./ui/board-list-card";
 
-function BoardsListPage() {
-  const boardsFilters = useBoardsFilters();
+function BoardsListFavoritePage() {
   const deleteBoard = useDeleteBoard();
   const updateFavorite = useUpdateFavorite();
   const cursorRef = useRef<HTMLDivElement | null>(null);
 
   const boardsQuery = useBoardsList({
-    sort: boardsFilters.sort,
-    search: useDebouncedValue(boardsFilters.search, 300),
+    isFavorite: true,
   });
 
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = boardsQuery;
@@ -54,30 +47,8 @@ function BoardsListPage() {
     <BoardsListLayout
       header={
         <BoardsListLayoutHeader
-          title="Доски"
+          title="Избранные доски"
           description="Здесь вы можете просматривать и управлять вашими досками"
-          actions={
-            <ViewModeToggle
-              value={viewMode}
-              onChange={(value) => setViewMode(value)}
-            />
-          }
-        />
-      }
-      filters={
-        <BoardsListLayoutFilters
-          sort={
-            <BoardsSortSelect
-              value={boardsFilters.sort}
-              onValueChange={boardsFilters.setSort}
-            />
-          }
-          filters={
-            <BoardsSearchInput
-              value={boardsFilters.search}
-              onChange={boardsFilters.setSearch}
-            />
-          }
           actions={
             <ViewModeToggle
               value={viewMode}
@@ -125,4 +96,4 @@ function BoardsListPage() {
     </BoardsListLayout>
   );
 }
-export const Component = BoardsListPage;
+export const Component = BoardsListFavoritePage;
