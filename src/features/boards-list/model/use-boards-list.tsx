@@ -1,4 +1,5 @@
 import { rqClient } from "@/shared/api/instance";
+import { keepPreviousData } from "@tanstack/react-query";
 
 type UseBoardsListParams = {
   limit?: number;
@@ -35,36 +36,14 @@ export function useBoardsList({
           Number(lastPageParams) < lastPage.totalPages
             ? Number(lastPageParams) + 1
             : null,
+        placeholderData: keepPreviousData,
       }
     );
-
-  // const cursorRef: RefCallback<HTMLDivElement> = useCallback(
-  //   (el) => {
-  //     const observer = new IntersectionObserver(
-  //       (entries) => {
-  //         if (entries[0].isIntersecting) {
-  //           fetchNextPage();
-  //         }
-  //       },
-  //       { threshold: 0.5 }
-  //     );
-
-  //     if (el) {
-  //       observer.observe(el);
-  //     }
-
-  //     return () => {
-  //       observer.disconnect();
-  //     };
-  //   },
-  //   [fetchNextPage]
-  // );
 
   const boards = data?.pages.flatMap((page) => page.list) ?? [];
 
   return {
     boards,
-    // cursorRef,
     isFetchingNextPage,
     fetchNextPage,
     isPending,

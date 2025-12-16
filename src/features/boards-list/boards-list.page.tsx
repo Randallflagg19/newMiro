@@ -9,14 +9,16 @@ import {
   BoardsListLayoutHeader,
   BoardsListLayoutFilters,
   BoardsListLayoutContent,
-  BoardsListListLayout,
-  BoardsListCardsLayout,
 } from "./ui/boards-list-layout";
 import { BoardsSortSelect } from "./ui/boards-sort-select";
 import { BoardsSearchInput } from "./ui/boards-search-input";
 import { ViewModeToggle } from "./ui/view-mode-toggle";
 import type { ViewMode } from "./ui/view-mode-toggle";
 import { BoardListCard } from "./ui/board-list-card";
+import { Button } from "@/shared/ui/kit/button";
+import { BoardFavoriteToggle } from "./ui/board-favorite-toggle";
+import { DropdownMenuItem } from "@/shared/ui/kit/dropdown-menu";
+import { BoardListItem } from "./ui/board-list-item";
 
 function BoardsListPage() {
   const boardsFilters = useBoardsFilters();
@@ -78,51 +80,65 @@ function BoardsListPage() {
               onChange={boardsFilters.setSearch}
             />
           }
-          actions={
-            <ViewModeToggle
-              value={viewMode}
-              onChange={(value) => setViewMode(value)}
-            />
-          }
         />
       }
     >
       <BoardsListLayoutContent
-        isPending={boardsQuery.isPending}
         isEmpty={boardsQuery.boards.length === 0}
+        isPending={boardsQuery.isPending}
         isPendingNext={boardsQuery.isFetchingNextPage}
         hasCursor={boardsQuery.hasNextPage}
         cursorRef={cursorRef}
-      >
-        {viewMode === "list" ? (
-          <BoardsListListLayout>
-            {boardsQuery.boards.map((board) => (
-              <BoardListCard
-                key={board.id}
-                board={board}
-                isFavorite={updateFavorite.isOptimisticFavorite(board)}
-                onFavoriteToggle={() => updateFavorite.toggle(board)}
-                onDelete={() => deleteBoard.deleteBoard(board.id)}
-                isDeletePending={deleteBoard.getIsPending(board.id)}
-              />
-            ))}
-          </BoardsListListLayout>
-        ) : (
-          <BoardsListCardsLayout>
-            {boardsQuery.boards.map((board) => (
-              <BoardListCard
-                key={board.id}
-                board={board}
-                isFavorite={updateFavorite.isOptimisticFavorite(board)}
-                onFavoriteToggle={() => updateFavorite.toggle(board)}
-                onDelete={() => deleteBoard.deleteBoard(board.id)}
-                isDeletePending={deleteBoard.getIsPending(board.id)}
-              />
-            ))}
-          </BoardsListCardsLayout>
-        )}
-      </BoardsListLayoutContent>
+        mode={viewMode}
+        renderList={() =>
+          boardsQuery.boards.map((board) => (
+            <BoardListItem
+              key={board.id}
+              board={board}
+              rightActions={
+                <BoardFavoriteToggle
+                  isFavorite={updateFavorite.isOptimisticFavorite(board)}
+                  onToggle={() => updateFavorite.toggle(board)}
+                />
+              }
+              menuActions={
+                <DropdownMenuItem
+                  variant="destructive"
+                  disabled={deleteBoard.getIsPending(board.id)}
+                  onClick={() => deleteBoard.deleteBoard(board.id)}
+                >
+                  Удалить
+                </DropdownMenuItem>
+              }
+            />
+          ))
+        }
+        renderGrid={() =>
+          boardsQuery.boards.map((board) => (
+            <BoardListCard
+              key={board.id}
+              board={board}
+              rightTopActions={
+                <BoardFavoriteToggle
+                  isFavorite={updateFavorite.isOptimisticFavorite(board)}
+                  onToggle={() => updateFavorite.toggle(board)}
+                />
+              }
+              bottomActions={
+                <Button
+                  variant="destructive"
+                  disabled={deleteBoard.getIsPending(board.id)}
+                  onClick={() => deleteBoard.deleteBoard(board.id)}
+                >
+                  Удалить
+                </Button>
+              }
+            />
+          ))
+        }
+      />
     </BoardsListLayout>
   );
 }
+
 export const Component = BoardsListPage;

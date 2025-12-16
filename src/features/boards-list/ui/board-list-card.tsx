@@ -1,38 +1,28 @@
 import { Button } from "@/shared/ui/kit/button";
 import { Card, CardFooter, CardHeader } from "@/shared/ui/kit/card";
 import { Link } from "react-router-dom";
-import { Switch } from "@/shared/ui/kit/switch";
-import { StarIcon } from "lucide-react";
 
-type Board = {
-  id: string;
-  name: string;
-  createdAt: string;
-  lastOpenedAt: string;
-  isFavorite: boolean;
+type BoardListCardProps = {
+  board: {
+    id: string;
+    name: string;
+    createdAt: string;
+    lastOpenedAt: string;
+  };
+  rightTopActions?: React.ReactNode;
+  bottomActions?: React.ReactNode;
 };
 
 export function BoardListCard({
   board,
-  isFavorite,
-  onFavoriteToggle,
-  onDelete,
-  isDeletePending,
-}: {
-  board: Board;
-  isFavorite: boolean;
-  onFavoriteToggle: () => void;
-  onDelete: () => void;
-  isDeletePending: boolean;
-}) {
+  rightTopActions,
+  bottomActions,
+}: BoardListCardProps) {
   return (
     <Card className="relative">
-      <div className="absolute top-2 right-2 flex items-center gap-2">
-        <span className="text-sm text-gray-500">
-          <StarIcon />
-        </span>
-        <Switch checked={isFavorite} onCheckedChange={onFavoriteToggle} />
-      </div>
+      {rightTopActions && (
+        <div className="absolute top-2 right-2">{rightTopActions}</div>
+      )}
       <CardHeader>
         <div className="flex flex-col gap-2">
           <Button
@@ -41,7 +31,6 @@ export function BoardListCard({
             className="text-left justify-start h-auto p-0"
           >
             <Link to={`/boards/${board.id}`}>
-              <span>{board.name}</span>
               <span className="text-xl font-medium">{board.name}</span>
             </Link>
           </Button>
@@ -54,15 +43,7 @@ export function BoardListCard({
           </div>
         </div>
       </CardHeader>
-      <CardFooter>
-        <Button
-          variant="destructive"
-          disabled={isDeletePending}
-          onClick={onDelete}
-        >
-          Удалить
-        </Button>
-      </CardFooter>
+      {bottomActions && <CardFooter>{bottomActions}</CardFooter>}
     </Card>
   );
 }
