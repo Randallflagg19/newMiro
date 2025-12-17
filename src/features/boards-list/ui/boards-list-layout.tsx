@@ -87,20 +87,18 @@ export function BoardsListLayoutContent({
   isPendingNext?: boolean;
   cursorRef?: React.Ref<HTMLDivElement>;
   hasCursor?: boolean;
-  renderList: () => React.ReactNode;
-  renderGrid: () => React.ReactNode;
+  renderList?: () => React.ReactNode;
+  renderGrid?: () => React.ReactNode;
   mode: ViewMode;
 }) {
   return (
     <div>
       {isPending && <div className="text-center py-10">Загрузка...</div>}
-      {mode === "list" && (
-        <div className="flex flex-col gap-2">{renderList()}</div>
+      {mode === "list" && renderList && (
+        <BoardsListLayoutList>{renderList?.()}</BoardsListLayoutList>
       )}
-      {mode === "cards" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {renderGrid()}
-        </div>
+      {mode === "cards" && renderGrid && (
+        <BoardsListLayoutCards>{renderGrid?.()}</BoardsListLayoutCards>
       )}
       {!isPending && children}
       {isEmpty && !isPending && (
@@ -126,6 +124,46 @@ export function BoardsListLayoutContent({
             }[mode]}
         </div>
       )}{" "}
+    </div>
+  );
+}
+
+export function BoardsListLayoutCards({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {children}
+    </div>
+  );
+}
+
+export function BoardsListLayoutList({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <div className="flex flex-col gap-2">{children}</div>;
+}
+
+export function BoardsLayoutContentGroups({
+  groups,
+}: {
+  groups: {
+    title: string;
+    items: React.ReactNode;
+  }[];
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      {groups.map((group) => (
+        <div key={group.title}>
+          <h2 className="text-lg font-bold mb-2">{group.title}</h2>
+          {group.items}
+        </div>
+      ))}
     </div>
   );
 }
