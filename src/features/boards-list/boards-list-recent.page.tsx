@@ -13,6 +13,7 @@ import type { ViewMode } from "./ui/view-mode-toggle";
 import { useRecentGroups } from "./model/use-recent-groups";
 import { BoardItem } from "./compose/board-item";
 import { BoardCard } from "./compose/board-card";
+import { BoardsSidebar } from "./ui/boards-sidebar";
 
 function BoardsListRecentPage() {
   const cursorRef = useRef<HTMLDivElement | null>(null);
@@ -46,6 +47,7 @@ function BoardsListRecentPage() {
 
   return (
     <BoardsListLayout
+      sidebar={<BoardsSidebar />}
       header={
         <BoardsListLayoutHeader
           title="Последние доски"

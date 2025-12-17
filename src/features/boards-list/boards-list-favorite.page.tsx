@@ -9,6 +9,7 @@ import { ViewModeToggle } from "./ui/view-mode-toggle";
 import type { ViewMode } from "./ui/view-mode-toggle";
 import { BoardItem } from "./compose/board-item";
 import { BoardCard } from "./compose/board-card";
+import { BoardsSidebar } from "./ui/boards-sidebar";
 function BoardsListFavoritePage() {
   const cursorRef = useRef<HTMLDivElement | null>(null);
 
@@ -39,6 +40,7 @@ function BoardsListFavoritePage() {
 
   return (
     <BoardsListLayout
+      sidebar={<BoardsSidebar />}
       header={
         <BoardsListLayoutHeader
           title="Избранные доски"
